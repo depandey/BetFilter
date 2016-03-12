@@ -1,6 +1,5 @@
 package controllers.account;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import controllers.Application;
 import models.User;
 import models.utils.AppException;
@@ -11,18 +10,16 @@ import play.Configuration;
 import play.Logger;
 import play.data.Form;
 import play.i18n.Messages;
-import play.libs.Json;
 import play.mvc.Controller;
 import play.mvc.Result;
-import play.libs.mailer.Email;
 import play.libs.mailer.MailerClient;
 
 import javax.inject.Inject;
+import javax.mail.internet.AddressException;
+import javax.mail.internet.InternetAddress;
 
 import views.html.account.signup.confirm;
 import views.html.account.signup.create;
-import views.html.account.signup.created;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.UUID;
@@ -60,7 +57,7 @@ public class Signup extends Controller {
     /**
      * Add the content-type json to response
      *
-     * @param Result httpResponse
+     * @param httpResponse httpResponse
      *
      * @return Result
      */
@@ -79,7 +76,11 @@ public class Signup extends Controller {
 
         if (registerForm.hasErrors()) {
             //return badRequest(create.render(registerForm));
-            return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"invalid request\"}"));
+            //return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"invalid request\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_11")).build())));
         }
 
         Application.Register register = registerForm.get();
@@ -105,15 +106,27 @@ public class Signup extends Controller {
             //ObjectNode result = Json.newObject();
             //result.put();
             //return ok(created.render());
-            return jsonResult(ok("{\"status\" : \"success\", \"message\" : \"please check email to complete registration\"}"));
+           // return jsonResult(ok("{\"status\" : \"success\", \"message\" : \"Your Account is Successfully Created. please check email to activate your account\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.success")).
+                            withMessage(Messages.get("application.response.status.success.message.SUCCESS_03")).build())));
         } catch (EmailException e) {
             Logger.debug("Signup.save Cannot send email", e);
             //flash("error", Messages.get("error.sending.email"));
-           return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"cannot send email\"}"));
+           //return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"cannot send email\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_10")).build())));
         } catch (Exception e) {
             Logger.error("Signup.save error", e);
             //flash("error", Messages.get("error.technical"));
-           return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"technical error. check config\"}"));
+           //return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"technical error. check config\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_02")).build())));
         }
         //return badRequest(create.render(registerForm));
     }
@@ -129,13 +142,33 @@ public class Signup extends Controller {
         // Check unique email
         if (User.findByEmail(email) != null) {
             //flash("error", Messages.get("error.email.already.exist"));
-           return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"email address already taken\"}"));
+           //return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"email address already taken\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_05")).build())));
            // return badRequest(create.render(registerForm));
+        }
+        else if(!verifyEmailAddress(email)){
+           // return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"cannot verify email address\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_06")).build())));
         }
 
         return null;
     }
 
+    private boolean verifyEmailAddress(String email) {
+        try {
+            InternetAddress internetAddress = new InternetAddress(email);
+            internetAddress.validate();
+            return true;
+        } catch (AddressException e) {
+            return false;
+        }
+    }
 
     /**
      * Send the welcome Email with the link to confirm.
@@ -160,7 +193,7 @@ public class Signup extends Controller {
      * Valid an account with the url in the confirm mail.
      *
      * @param token a token attached to the user we're confirming.
-     * @return Confirmationpage
+     * @return Confirmation page
      */
     public Result confirm(String token) {
         User user = User.findByConfirmationToken(token);
@@ -179,7 +212,7 @@ public class Signup extends Controller {
         try {
             if (User.confirm(user)) {
                 sendMailConfirmation(user);
-                //flash("success", Messages.get("account.successfully.validated"));
+                flash("success", Messages.get("account.successfully.validated"));
                 return ok(confirm.render());
                 //return jsonResult(ok("{\"status\" : \"success\", \"message\" : \"account successfully validated\"}"));
             } else {

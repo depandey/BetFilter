@@ -66,3 +66,29 @@ mail.reset.fail.message=You (or someone else) entered this email address when tr
 
 mail.reset.confirm.subject=BetFilter - New password
 mail.reset.confirm.message=Hello, <br><br> Your password has been reset.
+
+application.response.status.success=success
+application.response.status.success.message.SUCCESS_01=login successful
+application.response.status.success.message.SUCCESS_02=logout successful
+application.response.status.success.message.SUCCESS_03=Your Account is Successfully Created. please check email to activate your account
+application.response.status.success.message.SUCCESS_04=password reset link send to your email address
+application.response.status.success.message.SUCCESS_05=password changed successfully
+application.response.status.failure=failure
+application.response.status.failure.message.ERROR_01=invalid email address or password
+application.response.status.failure.message.ERROR_02=technical error. please check config
+application.response.status.failure.message.ERROR_03=invalid/expired authorization key
+application.response.status.failure.message.ERROR_04=account not validated check email
+application.response.status.failure.message.ERROR_05=email address already taken
+application.response.status.failure.message.ERROR_06=cannot verify email address
+application.response.status.failure.message.ERROR_07=invalid email or request
+application.response.status.failure.message.ERROR_09=no user found with email
+application.response.status.failure.message.ERROR_10=cannot send email
+application.response.status.failure.message.ERROR_11=invalid request
+application.response.status.failure.message.ERROR_12=cannot validate url
+application.response.status.failure.message.ERROR_13=password change error
+application.response.status.failure.message.ERROR_14=unable to send password change notification to email address
+
+
+
+
+

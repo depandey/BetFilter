@@ -50,11 +50,14 @@ public class User extends Model {
     @Formats.NonEmpty
     public String passwordHash;
 
-    @Formats.DateTime(pattern = "yyyy-MM-dd HH:mm:ss")
-    public Date dateCreation;
+    @Formats.DateTime(pattern = "yyyy-MM-dd")
+    public Date dateCreation = new Date();
 
     @Formats.NonEmpty
     public Boolean validated = false;
+
+    @Formats.NonEmpty
+    public Boolean admin = false;
 
     public String auth_key;
 

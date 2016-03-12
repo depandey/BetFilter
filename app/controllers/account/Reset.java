@@ -1,8 +1,10 @@
 package controllers.account;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import models.Token;
 import models.User;
 import models.utils.AppException;
+import models.utils.Hash;
 import models.utils.Mail;
 import org.apache.commons.mail.EmailException;
 import play.Logger;
@@ -21,6 +23,7 @@ import views.html.account.reset.reset;
 import views.html.account.reset.runAsk;
 
 import java.net.MalformedURLException;
+import java.util.UUID;
 
 import static play.data.Form.form;
 
@@ -51,7 +54,7 @@ public class Reset extends Controller {
     /**
      * Add the content-type json to response
      *
-     * @param Result httpResponse
+     * @param httpResponse httpResponse
      *
      * @return Result
      */
@@ -82,7 +85,11 @@ public class Reset extends Controller {
         if (askForm.hasErrors()) {
             flash("error", Messages.get("signup.valid.email"));
             //return badRequest(ask.render(askForm));
-            return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"invalid email or request\"}"));
+           // return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"invalid email or request\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_07")).build())));
         }
 
         final String email = askForm.get().email;
@@ -98,7 +105,11 @@ public class Reset extends Controller {
             Logger.debug("No user found with email " + email);
             sendFailedPasswordResetAttempt(email);
             //return ok(runAsk.render());
-            return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"no user found with email\"}"));
+            //return jsonResult(ok("{\"status\" : \"failure\", \"message\" : \"no user found with email\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_09")).build())));
         }
 
         Logger.debug("Sending password reset link to user " + user);
@@ -107,12 +118,19 @@ public class Reset extends Controller {
             Token t = new Token();
             t.sendMailResetPassword(user,mailerClient);
             //return ok(runAsk.render());
-            return jsonResult(ok("{\"status\" : \"success\", \"message\" : \"password reset link send to your email\"}"));
+            //return jsonResult(ok("{\"status\" : \"success\", \"message\" : \"password reset link send to your email\"}"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.success")).
+                            withMessage(Messages.get("application.response.status.success.message.SUCCESS_04")).build())));
         } catch (MalformedURLException e) {
             Logger.error("Cannot validate URL", e);
-            flash("error", Messages.get("error.technical"));
+            //flash("error", Messages.get("error.technical"));
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_12")).build())));
         }
-        return badRequest(ask.render(askForm));
     }
 
     /**
@@ -154,6 +172,68 @@ public class Reset extends Controller {
 
         Form<ResetForm> resetForm = form(ResetForm.class);
         return ok(reset.render(resetForm, token));
+    }
+
+    public Result changePassword(String auth_key){
+        try {
+            User user = User.findByAuthKey(auth_key);
+            if(user != null){
+                JsonNode json = request().body().asJson();
+                if(json == null) {
+                    return jsonResult(ok(play.libs.Json.toJson
+                            (models.Response.responseBuilder.aresponse().
+                                    withStatus(Messages.get("application.response.status.failure")).
+                                    withMessage(Messages.get("application.response.status.failure.message.ERROR_11")).build())));
+                } else {
+                    String password = json.findPath("inputPassword").textValue();
+                    if(password == null) {
+                        return jsonResult(ok(play.libs.Json.toJson
+                                (models.Response.responseBuilder.aresponse().
+                                        withStatus(Messages.get("application.response.status.failure")).
+                                        withMessage(Messages.get("application.response.status.failure.message.ERROR_11")).build())));
+                    } else {
+                        user.passwordHash = Hash.createPassword(password);
+                        user.auth_key = UUID.randomUUID().toString()+ user.passwordHash;
+                        user.save();
+                        // Send email saying that the password has just been changed.
+                        sendPasswordChanged(user);
+                        return jsonResult(ok(play.libs.Json.toJson
+                                (models.Response.responseBuilder.aresponse().
+                                        withStatus(Messages.get("application.response.status.success")).
+                                        withData(user).
+                                        withMessage(Messages.get("application.response.status.success.message.SUCCESS_05")).build())));
+                    }
+                }
+            }
+        }
+        catch (IllegalStateException e){
+            //return ok("{\"status\" : \"failure\", \"message\" : \"authorization key\"}");
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_03")).build())));
+        }
+        catch (AppException e){
+            //return ok("{\"status\" : \"failure\", \"message\" : \"authorization key\"}");
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_13")).build())));
+        }
+        catch (EmailException e){
+            //return ok("{\"status\" : \"failure\", \"message\" : \"authorization key\"}");
+            return jsonResult(ok(play.libs.Json.toJson
+                    (models.Response.responseBuilder.aresponse().
+                            withStatus(Messages.get("application.response.status.failure")).
+                            withMessage(Messages.get("application.response.status.failure.message.ERROR_14")).build())));
+        }
+        //flash("success", Messages.get("youve.been.logged.out"));
+        //return jsonResult(ok(STATUS_SUCCESS+LOGOUT_SUCCESS));
+        //return GO_HOME;
+        return jsonResult(ok(play.libs.Json.toJson
+                (models.Response.responseBuilder.aresponse().
+                        withStatus(Messages.get("application.response.status.failure")).
+                        withMessage(Messages.get("application.response.status.failure.message.ERROR_13")).build())));
     }
 
     /**
